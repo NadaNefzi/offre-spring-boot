@@ -1,7 +1,7 @@
 FROM maven:3.8.4-openjdk-17 AS build
 WORKDIR /app
 
-# Copier et télécharger les dépendances d'abord (pour mieux utiliser le cache)
+# Copier et télécharger les dépendances d'abord
 COPY pom.xml .
 RUN mvn dependency:go-offline
 
@@ -9,15 +9,15 @@ RUN mvn dependency:go-offline
 COPY src ./src
 RUN mvn clean package -DskipTests
 
-# Étape de vérification (optionnelle mais utile pour le debug)
-RUN ls -la /app/target/ && echo "Contenu du dossier target:"
+# Vérifier le contenu du dossier target
+RUN ls -la /app/target/
 
 FROM eclipse-temurin:17-jdk-alpine
-# Utiliser un nom plus explicite, en s'attendant à un seul fichier .jar
-# Note: Si plusieurs .jar sont générés, il faudra être plus précis.
-COPY --from=build /app/target/*.jar /app.jar
+# Copier le fichier WAR (pas JAR) et le renommer en app.war
+COPY --from=build /app/target/*.war /app.war
 
-# Vérifier que le fichier a bien été copié (optionnel)
-RUN ls -la /app.jar && echo "Fichier app.jar présent dans l'image finale."
+# Vérifier que le fichier a bien été copié
+RUN ls -la /app.war
 
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+# Utiliser java -jar avec le fichier WAR (Spring Boot sait exécuter les WAR)
+ENTRYPOINT ["java", "-jar", "/app.war"]
